@@ -52,11 +52,17 @@ jobs:
         make package/sing-box/compile V=s 2>&1 | tee build.log
         grep -i "error" -n build.log || true
 
+    - name: Debug list SDK output
+      run: |
+        echo "Listing SDK output:"
+        find sdk/bin -type f -maxdepth 4
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: sing-box-aarch64_cortex-a53
-        path: sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
+        path: |
+          sdk/bin/packages/**/sing-box_*.ipk
 
   publish-nightly:
     runs-on: ubuntu-latest
