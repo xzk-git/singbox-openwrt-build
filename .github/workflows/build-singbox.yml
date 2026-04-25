@@ -1,0 +1,73 @@
+name: Build full-featured sing-box for OpenWrt (aarch64_cortex-a53)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install build dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          build-essential clang flex bison g++ gawk gcc-multilib \
+          gettext git libncurses5-dev libssl-dev python3-distutils \
+          rsync unzip zlib1g-dev
+
+    - name: Download OpenWrt SDK (24.10.6 mediatek/filogic)
+      run: |
+        wget https://downloads.openwrt.org/releases/24.10.6/targets/mediatek/filogic/openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64.tar.xz
+        tar -xJf openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64.tar.xz
+        mv openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64 sdk
+
+    - name: Clone sing-box source
+      run: |
+        cd sdk
+        git clone https://github.com/SagerNet/sing-box.git package/sing-box
+        cd package/sing-box
+        git checkout v1.13.11
+
+    - name: Configure sing-box with ALL features
+      run: |
+        cd sdk
+
+        # 基础：启用 sing-box 包
+        cat >> .config << 'EOF'
+        CONFIG_PACKAGE_sing-box=y
+
+        # 功能开关（根据 sing-box OpenWrt package 的 Kconfig 约定）
+        CONFIG_SING_BOX_WITH_CLASH_API=y
+        CONFIG_SING_BOX_WITH_DHCP=y
+        CONFIG_SING_BOX_WITH_DNS=y
+        CONFIG_SING_BOX_WITH_FAKEIP=y
+        CONFIG_SING_BOX_WITH_GVISOR=y
+        CONFIG_SING_BOX_WITH_NAIVE=y
+        CONFIG_SING_BOX_WITH_QUIC=y
+        CONFIG_SING_BOX_WITH_REALITY=y
+        CONFIG_SING_BOX_WITH_TUN=y
+        CONFIG_SING_BOX_WITH_UTLS=y
+        CONFIG_SING_BOX_WITH_WIREGUARD=y
+        CONFIG_SING_BOX_WITH_TAILSCALE=y
+        CONFIG_SING_BOX_WITH_ACME=y
+        CONFIG_SING_BOX_WITH_CCM=y
+        CONFIG_SING_BOX_WITH_OCM=y
+        EOF
+
+        make defconfig
+
+    - name: Build sing-box package
+      run: |
+        cd sdk
+        make package/sing-box/compile V=s
+
+    - name: Upload sing-box ipk artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sing-box-full-aarch64_cortex-a53
+        path: |
+          sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
