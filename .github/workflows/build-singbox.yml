@@ -16,8 +16,10 @@ jobs:
         sudo apt update
         sudo apt install -y \
           build-essential clang flex bison g++ gawk gcc-multilib \
-          gettext git libncurses5-dev libssl-dev python3-distutils \
+          gettext git libncurses5-dev libssl-dev \
+          python3-setuptools python3-pip python3-wheel \
           rsync unzip zlib1g-dev
+
 
     - name: Download OpenWrt SDK (24.10.6 mediatek/filogic)
       run: |
