@@ -20,7 +20,6 @@ jobs:
           python3-setuptools python3-pip python3-wheel \
           rsync unzip zlib1g-dev
 
-
     - name: Download OpenWrt SDK (23.05.5 mediatek/filogic)
       run: |
         wget https://downloads.openwrt.org/releases/23.05.5/targets/mediatek/filogic/openwrt-sdk-23.05.5-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
@@ -34,32 +33,12 @@ jobs:
         cp -r openwrt-packages/net/sing-box ./sing-box
         rm -rf openwrt-packages
 
-    - name: Configure sing-box with ALL features
+    - name: Configure sing-box
       run: |
         cd sdk
-
-        # 基础：启用 sing-box 包
         cat >> .config << 'EOF'
         CONFIG_PACKAGE_sing-box=y
-
-        # 功能开关（根据 sing-box OpenWrt package 的 Kconfig 约定）
-        CONFIG_SING_BOX_WITH_CLASH_API=y
-        CONFIG_SING_BOX_WITH_DHCP=y
-        CONFIG_SING_BOX_WITH_DNS=y
-        CONFIG_SING_BOX_WITH_FAKEIP=y
-        CONFIG_SING_BOX_WITH_GVISOR=y
-        CONFIG_SING_BOX_WITH_NAIVE=y
-        CONFIG_SING_BOX_WITH_QUIC=y
-        CONFIG_SING_BOX_WITH_REALITY=y
-        CONFIG_SING_BOX_WITH_TUN=y
-        CONFIG_SING_BOX_WITH_UTLS=y
-        CONFIG_SING_BOX_WITH_WIREGUARD=y
-        CONFIG_SING_BOX_WITH_TAILSCALE=y
-        CONFIG_SING_BOX_WITH_ACME=y
-        CONFIG_SING_BOX_WITH_CCM=y
-        CONFIG_SING_BOX_WITH_OCM=y
         EOF
-
         make defconfig
 
     - name: Build sing-box package
@@ -70,6 +49,6 @@ jobs:
     - name: Upload sing-box ipk artifact
       uses: actions/upload-artifact@v4
       with:
-        name: sing-box-full-aarch64_cortex-a53
+        name: sing-box-aarch64_cortex-a53
         path: |
           sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
