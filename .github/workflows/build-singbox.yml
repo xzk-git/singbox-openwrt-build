@@ -23,9 +23,9 @@ jobs:
 
     - name: Download OpenWrt SDK (24.10.6 mediatek/filogic)
       run: |
-        wget https://downloads.openwrt.org/releases/24.10.6/targets/mediatek/filogic/openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64.tar.xz
-        tar -xJf openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64.tar.xz
-        mv openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.2.0_musl.Linux-x86_64 sdk
+        wget https://downloads.openwrt.org/releases/24.10.6/targets/mediatek/filogic/openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.xz
+        tar -xJf openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.xz
+        mv openwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64 sdk
 
     - name: Clone sing-box source
       run: |
