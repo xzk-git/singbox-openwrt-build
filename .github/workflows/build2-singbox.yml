@@ -1,0 +1,117 @@
+name: Build & Publish sing-box for OpenWrt (aarch64_cortex-a53)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install build dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          build-essential clang flex bison g++ gawk gcc-multilib \
+          gettext git libncurses5-dev libssl-dev \
+          python3-setuptools python3-pip python3-wheel \
+          rsync unzip zlib1g-dev
+
+    - name: Download OpenWrt SDK (23.05.5 mediatek/filogic)
+      run: |
+        wget https://downloads.openwrt.org/releases/23.05.5/targets/mediatek/filogic/openwrt-sdk-23.05.5-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+        tar -xJf openwrt-sdk-23.05.5-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+        mv openwrt-sdk-23.05.5-mediatek-filogic_gcc-12.3.0_musl.Linux-x86_64 sdk
+
+    - name: Clone OpenWrt sing-box package
+      run: |
+        cd sdk/package
+        git clone https://github.com/openwrt/packages.git openwrt-packages
+        cp -r openwrt-packages/net/sing-box ./sing-box
+        rm -rf openwrt-packages
+
+    - name: Configure sing-box
+      run: |
+        cd sdk
+        cat >> .config << 'EOF'
+        CONFIG_PACKAGE_sing-box=y
+        EOF
+        make defconfig
+
+    - name: Build sing-box package
+      run: |
+        cd sdk
+        make package/sing-box/compile V=s 2>&1 | tee build.log
+        grep -i "error" -n build.log || true
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sing-box-aarch64_cortex-a53
+        path: sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
+
+  publish-nightly:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        path: dist-all
+
+    - name: List files
+      run: ls -R dist-all
+
+    - name: Generate Release body
+      run: |
+        cat > release_body.md << 'EOF'
+        ## 📦 sing-box for OpenWrt (aarch64_cortex-a53)
+
+        | File | Download |
+        |------|----------|
+        | sing-box.ipk | https://github.com/xzk-git/singbox-openwrt-build/releases/download/nightly-build/sing-box.ipk |
+        EOF
+
+    - name: Create nightly release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: nightly-build
+        name: "sing-box (OpenWrt aarch64_cortex-a53) Nightly Build"
+        prerelease: true
+        files: dist-all/**/*
+        overwrite_files: true
+        body_path: release_body.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update README
+      run: |
+        cat > README.md << 'EOF'
+        # sing-box for OpenWrt (aarch64_cortex-a53)
+
+        ## 📦 Latest Nightly Build
+
+        | File | Download |
+        |------|----------|
+        | sing-box.ipk | https://github.com/xzk-git/singbox-openwrt-build/releases/download/nightly-build/sing-box.ipk |
+        EOF
+
+    - name: Commit README update
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add README.md
+        git commit -m "Update README with latest nightly link" || true
+        git push
