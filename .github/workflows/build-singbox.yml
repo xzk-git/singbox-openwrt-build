@@ -1,7 +1,12 @@
-name: Build full-featured sing-box for OpenWrt (aarch64_cortex-a53)
+name: Build & Publish sing-box for OpenWrt (aarch64_cortex-a53)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -47,9 +52,70 @@ jobs:
         make package/sing-box/compile V=s 2>&1 | tee build.log
         grep -i "error" -n build.log || true
 
-    - name: Upload sing-box ipk artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: sing-box-aarch64_cortex-a53
-        path: |
-          sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
+        path: sdk/bin/packages/aarch64_cortex-a53/base/sing-box_*.ipk
+
+  publish-nightly:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        path: dist-all
+
+    - name: List files
+      run: ls -R dist-all
+
+    - name: Generate Release body
+      run: |
+        cat > release_body.md << 'EOF'
+        ## 📦 sing-box for OpenWrt (aarch64_cortex-a53)
+
+        | File | Download |
+        |------|----------|
+        | sing-box.ipk | https://github.com/xzk-git/singbox-openwrt-build/releases/download/nightly-build/sing-box.ipk |
+
+        EOF
+
+    - name: Create nightly release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: nightly-build
+        name: "sing-box (OpenWrt aarch64_cortex-a53) Nightly Build"
+        prerelease: true
+        files: dist-all/**/*
+        overwrite_files: true
+        body_path: release_body.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update README
+      run: |
+        cat > README.md << 'EOF'
+        # sing-box for OpenWrt (aarch64_cortex-a53)
+
+        This repository automatically builds sing-box for OpenWrt (mediatek/filogic).
+
+        ## 📦 Latest Nightly Build
+
+        | File | Download |
+        |------|----------|
+        | sing-box.ipk | https://github.com/xzk-git/singbox-openwrt-build/releases/download/nightly-build/sing-box.ipk |
+
+        EOF
+
+    - name: Commit README update
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add README.md
+        git commit -m "Update README with latest nightly link" || true
+        git push
